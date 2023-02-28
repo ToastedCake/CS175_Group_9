@@ -73,6 +73,7 @@ missionXML="""
                     <Range name="entities" xrange="30" yrange="30" zrange="30"/>
                 </ObservationFromNearbyEntities>
                 <DiscreteMovementCommands/>
+                <AbsoluteMovementCommands/>
                 <InventoryCommands/>
                 <MissionQuitCommands/>
             </AgentHandlers>
@@ -130,6 +131,7 @@ def move_to(agent_host):
         dy = target_y - current_y
         dz = target_z - current_z
         distance = math.sqrt(dx * dx + dy * dy + dz * dz)
+        yaw = -math.atan2(dx, dz) * 180 / math.pi
         # print("agent location: (",current_x,current_y,current_z,")\n")
         # print("pigs location: (",target_x,target_y,target_z,")\n")
         # print("dx,dy,dz,distance are: (",dx,dy,dz,distance,")\n")
@@ -142,15 +144,19 @@ def move_to(agent_host):
         else:
             print("Moving towards target location...")
             if(dx>0):
+                agent_host.sendCommand(f"setYaw {yaw}")
                 agent_host.sendCommand("moveeast 1")
             elif(dx<0):
+                agent_host.sendCommand(f"setYaw {yaw}")
                 agent_host.sendCommand("movewest 1")
             elif(dx == 0):
                 agent_host.sendCommand("strafe 0")
 
             if(dz>0):
+                agent_host.sendCommand(f"setYaw {yaw}")
                 agent_host.sendCommand("movesouth 1")
             elif(dz<0):
+                agent_host.sendCommand(f"setYaw {yaw}")
                 agent_host.sendCommand("movenorth 1")
             elif(dz==0):
                 agent_host.sendCommand("strafe 0")
