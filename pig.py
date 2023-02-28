@@ -1,4 +1,3 @@
-
 from __future__ import print_function
 # ------------------------------------------------------------------------------------------------
 # Copyright (c) 2016 Microsoft Corporation
@@ -45,7 +44,6 @@ missionXML="""
         <About>
             <Summary>Find the pig and move towards it.</Summary>
         </About>
-
         <ServerSection>
             <ServerInitialConditions>
                 <Time>
@@ -59,7 +57,7 @@ missionXML="""
                 <DrawingDecorator>
                     <DrawEntity x="0.5" y="5" z="0.5" type="Pig"/>
                 </DrawingDecorator>
-                <ServerQuitFromTimeUp timeLimitMs="10000"/>
+                <ServerQuitFromTimeUp timeLimitMs="1000000"/>
                 <ServerQuitWhenAnyAgentFinishes />
             </ServerHandlers>
         </ServerSection>
@@ -126,6 +124,12 @@ def move_to(agent_host):
         
         target_x,target_y,target_z = pig_location[0],pig_location[1],pig_location[2]
         current_x, current_y, current_z = agent_location[0],agent_location[1],agent_location[2]
+
+        # check to keep agent positioned correctly before a discrete move command
+        if current_x % 1 != 0.5:
+            agent_host.sendCommand(f"tpx {math.floor (current_x) + 0.5}")
+        if current_z % 1 != 0.5:
+            agent_host.sendCommand(f"tpz {math.floor (current_z) + 0.5}")
 
         dx = target_x - current_x
         dy = target_y - current_y
