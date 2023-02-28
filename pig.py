@@ -66,13 +66,13 @@ missionXML="""
         <AgentSection mode="Survival">
             <Name>Agent</Name>
             <AgentStart>
-                <Placement x="0.5" y="5" z="-10"/>
+                <Placement x="16.5" y="5" z="-10.5"/>
             </AgentStart>
             <AgentHandlers>
                 <ObservationFromNearbyEntities>
                     <Range name="entities" xrange="30" yrange="30" zrange="30"/>
                 </ObservationFromNearbyEntities>
-                <ContinuousMovementCommands turnSpeedDegs="180"/>
+                <DiscreteMovementCommands/>
                 <InventoryCommands/>
                 <MissionQuitCommands/>
             </AgentHandlers>
@@ -111,24 +111,28 @@ def find_agent_location(agent_host):
 
 def move_to(agent_host):       
     while(1):
-        time.sleep(2)
+        # time.sleep(2)
         # msg = world_state.observations[-1].text
         # observations = json.loads(msg)
         # print(observations)
         pig_location = find_pig_location(agent_host)
+        agent_location = find_agent_location(agent_host)
         if pig_location is None:
             print("There is no pig nearby the agent")
             return
+        if agent_location is None:
+            return
+        
         target_x,target_y,target_z = pig_location[0],pig_location[1],pig_location[2]
-        current_x, current_y, current_z = find_agent_location(agent_host)
+        current_x, current_y, current_z = agent_location[0],agent_location[1],agent_location[2]
 
         dx = target_x - current_x
         dy = target_y - current_y
         dz = target_z - current_z
         distance = math.sqrt(dx * dx + dy * dy + dz * dz)
-        print("agent location: (",current_x,current_y,current_z,")\n")
-        print("pigs location: (",target_x,target_y,target_z,")\n")
-        print("dx,dy,dz,distance are: (",dx,dy,dz,distance,")\n")
+        # print("agent location: (",current_x,current_y,current_z,")\n")
+        # print("pigs location: (",target_x,target_y,target_z,")\n")
+        # print("dx,dy,dz,distance are: (",dx,dy,dz,distance,")\n")
 
         if distance == 0:
             agent_host.sendCommand("strafe 0")
