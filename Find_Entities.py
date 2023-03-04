@@ -28,6 +28,7 @@ import os
 import sys
 import time
 import math
+#import nlp_parser
 
 if sys.version_info[0] == 2:
     sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)  # flush print output immediately
@@ -35,12 +36,25 @@ else:
     import functools
     print = functools.partial(print, flush=True)
 
-# More interesting generator string: "3;7,44*49,73,35:1,159:4,95:13,35:13,159:11,95:10,159:14,159:6,35:6,95:6;12;"
-                    # <DrawLine x1="-1" y1="5" z1="-1" x2="-1" y2="5" z2="4" type="fence"/>
-                    # <DrawLine x1="0" y1="5" z1="-1" x2="3" y2="5" z2="-1" type="fence"/>
-                    # <DrawLine x1="4" y1="5" z1="-1" x2="4" y2="5" z2="4" type="fence"/>
-                    # <DrawLine x1="0" y1="5" z1="4" x2="3" y2="5" z2="4" type="fence"/>
-missionXML="""
+def getEntityDrawing():
+    """Create the XML for the entities."""
+    drawing =""
+    drawing += '<DrawEntity x="0.5" y="5" z="0.5" type="Pig"/>'
+    drawing += '<DrawEntity x="30.5" y="5" z="30.5" type="Cow"/>'
+    drawing += '<DrawEntity x="17.5" y="5" z="55.5" type="Sheep"/>'
+    return drawing
+
+def getItemDrawing():
+    """Create the XML for the items."""
+    drawing = ""
+    drawing += '<DrawItem x="1" y="5" z="30" type="diamond_sword"/>'
+    drawing += '<DrawItem x="10" y="5" z="10" type="iron_sword"/>'
+    drawing += '<DrawItem x="-20" y="5" z="30" type="diamond_pickaxe"/>'
+    return drawing
+
+def getMissionXML():
+
+    return '''
     <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
         <About>
             <Summary>Find Entity on the map and move towards it.</Summary>
@@ -57,9 +71,7 @@ missionXML="""
             <ServerHandlers>
                 <FlatWorldGenerator generatorString="3;7,3*3,2;12;biome_1,village,decoration"/>
                 <DrawingDecorator>
-                    <DrawEntity x="0.5" y="5" z="0.5" type="Pig"/>
-                    <DrawEntity x="30.5" y="5" z="30.5" type="Cow"/>
-                    <DrawEntity x="17.5" y="5" z="55.5" type="Sheep"/>
+                    '''+ getItemDrawing() + getEntityDrawing()+ '''
                 </DrawingDecorator>
                 <ServerQuitFromTimeUp timeLimitMs="50000"/>
                 <ServerQuitWhenAnyAgentFinishes />
@@ -80,8 +92,9 @@ missionXML="""
                 <MissionQuitCommands/>
             </AgentHandlers>
         </AgentSection>
-    </Mission>
-"""
+    </Mission>'''
+
+missionXML= getMissionXML()
 
 def find_entity_location(agent_host,entityName):
     world_state = agent_host.getWorldState()
@@ -92,6 +105,7 @@ def find_entity_location(agent_host,entityName):
             return None
     msg = world_state.observations[-1].text
     observations = json.loads(msg)
+    #print(observations)
     if 'entities' in observations:
         for entity in observations['entities']:
             if entity['name'] == entityName:
@@ -113,20 +127,21 @@ def find_agent_location(agent_host):
     return None
 
 def move_to(agent_host,entityName):       
+    loopCount = 0
     while(1):
         # time.sleep(2)
         # msg = world_state.observations[-1].text
         # observations = json.loads(msg)
         # print(observations)
-        pig_location = find_entity_location(agent_host,entityName)
+        entity_location = find_entity_location(agent_host,entityName)
         agent_location = find_agent_location(agent_host)
-        if pig_location is None:
+        if entity_location is None:
             print("There is no " +entityName+ " nearby the agent")
             return
         if agent_location is None:
             return
-        
-        target_x,target_y,target_z = pig_location[0],pig_location[1],pig_location[2]
+
+        target_x,target_y,target_z = entity_location[0],entity_location[1],entity_location[2]
         current_x, current_y, current_z = agent_location[0],agent_location[1],agent_location[2]
 
         # check to keep agent positioned correctly before a discrete move command
@@ -151,11 +166,15 @@ def move_to(agent_host,entityName):
             agent_host.sendCommand("strafe 0")
             agent_host.sendCommand(f"setYaw {yaw}")
             agent_host.sendCommand(f"setPitch {pitch_degrees}")
-            print("Already close to "+ entityName+"'s location.")
+            print("\nAlready at "+ entityName+"'s location.")
             return 
 
         else:
-            print("Moving towards "+ entityName+"'s location...")
+            if(loopCount == 0):
+                print("\nMoving towards "+ entityName+"'s location...",end="")
+            else:
+                print(".",end="")
+            
             if(dx>0):
                 agent_host.sendCommand(f"setYaw {yaw}")
                 agent_host.sendCommand(f"setPitch {pitch_degrees}")
@@ -177,7 +196,7 @@ def move_to(agent_host,entityName):
                 agent_host.sendCommand("movenorth 1")
             elif(dz==0):
                 agent_host.sendCommand("strafe 0")
-
+        loopCount+=1
 # Create default Malmo objects:
 agent_host = MalmoPython.AgentHost()
 try:
@@ -217,14 +236,15 @@ while not world_state.has_mission_begun:
         print("Error:",error.text)
 
 print()
-print("Mission running ", end=' ')
+print("Mission running", end='')
 #################################################
 # Find the closet entity's location on the map and move the agent toward it
+move_to(agent_host,"iron_sword")
+move_to(agent_host,"diamond_pickaxe")
+move_to(agent_host,"diamond_sword")
 move_to(agent_host,"Pig")
 move_to(agent_host,"Cow")
 move_to(agent_host,"Sheep")
-
-
 ######################################################
 # Loop until mission ends:
 while world_state.is_mission_running:
