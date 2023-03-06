@@ -177,21 +177,14 @@ def parse_root_verb (verb, commands_map, agent_host):
             # move forward
             # move backwards
             if word.lemma_ in commands_map.get (malmo_command):
-                # print (command_map[malmo_command][word.lemma_])
                 c = send_command_option (malmo_command, word, commands_map, agent_host)
                 if c:
                     commands.append (c)
         elif word.pos == NOUN or word.pos == PROPN:
             # move 1 block forward
-            # left registers
-            if word.lemma_ == "left" and word.lemma_ in commands_map.get (malmo_command):
-                c = send_command_option (malmo_command, word, commands_map, agent_host)
-                if c:
-                    commands.append (c)
-            else:
-                c = send_object_command (malmo_command, word, commands_map, agent_host)
-                if c:
-                    commands.append (c)
+            c = send_object_command (malmo_command, word, commands_map, agent_host)
+            if c:
+                commands.append (c)
         elif word.pos == ADP:
             # preposition object
             # move to the left
