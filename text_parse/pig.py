@@ -67,6 +67,11 @@ missionXML="""
             <Name>Agent</Name>
             <AgentStart>
                 <Placement x="16.5" y="5" z="-10.5"/>
+                <Inventory>
+                    <InventoryItem type="diamond_sword" slot="0"/>
+                    <InventoryItem type="diamond_axe" slot="1"/>
+                    <InventoryItem type="diamond_pickaxe" slot="2"/>
+                </Inventory>
             </AgentStart>
             <AgentHandlers>
                 <ObservationFromNearbyEntities>
@@ -74,6 +79,7 @@ missionXML="""
                 </ObservationFromNearbyEntities>
                 <DiscreteMovementCommands/>
                 <AbsoluteMovementCommands/>
+                <ObservationFromFullInventory flat="false"/>
                 <InventoryCommands/>
                 <MissionQuitCommands/>
             </AgentHandlers>
@@ -211,8 +217,9 @@ print("Mission running ", end=' ')
 
 # Find the pig's location on the map and move the agent toward it
 command = input (": ")
-while command.lower != "quit":
-    commands = nlp_parser.parse_string_command (command)
+while command.lower() != "quit":
+    start_time = time.time()
+    commands = nlp_parser.parse_string_command (command, agent_host = agent_host)
     
     for c in commands:
         if c:
@@ -220,7 +227,10 @@ while command.lower != "quit":
             for c in c:
                 if c:
                     agent_host.sendCommand (c)
+            time.sleep(1)
     
+    end_time = time.time() - start_time
+    print ("time executed:", end_time, "seconds")
     command = input (": ")
 
 ######################################################

@@ -11,6 +11,7 @@ from gensim.models import KeyedVectors
 import gensim
 from gensim import models
 from gensim.models import Word2Vec
+import json
 
 # Load pretrained model (since intermediate data is not included, the model cannot be refined with additional data)
 #model = Word2Vec.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True, norm_only=True) -> Deprecated
@@ -70,7 +71,7 @@ def get_best_match (word, commands_map, threshold):
     command = keys[np.argmax (scores)]
     return command
 
-def get_similar_command (verb, commands_map):
+def get_similar_command (verb, commands_map, agent_host):
     lemma_verb = verb.lemma_
     # synonyms?
     # left
@@ -81,13 +82,13 @@ def get_similar_command (verb, commands_map):
     command = get_best_match (lemma_verb, commands_map, t)
     return command
 
-def send_command (verb, commands_map):
+def send_command (verb, commands_map, agent_host):
     if str (verb) == "stop":
-        return send_stop_command (commands_map)
+        return send_stop_command (commands_map, agent_host)
     command = commands_map.get (str (verb)).get('')
     return [command]
  
-def send_command_option (verb, option, commands_map):
+def send_command_option (verb, option, commands_map, agent_host):
     for a in option.ancestors:
         if a.pos == VERB:
             for r in a.rights:
@@ -112,16 +113,15 @@ def send_command_option (verb, option, commands_map):
     command = commands_map.get (verb).get (option.lemma_)
     return [command]
 
-def send_prop_command (verb, prep, commands_map):
+def send_prop_command (verb, prep, commands_map, agent_host):
     if prep.lemma_ in commands_map.get ("move"):
         for r in prep.rights:
             if r.lemma_ in commands_map.get ("move"):
-                c = send_command_option (verb, r, commands_map)
+                c = send_command_option (verb, r, commands_map, agent_host)
                 if c:
                     return c
 
-def send_object_command (verb, object, commands_map):
-    # objString = getObjectString (object)
+def send_object_command (verb, object, commands_map, agent_host):
     for l in object.lefts:
         if l.pos == NUM:  
             for a in l.ancestors:
@@ -135,23 +135,32 @@ def send_object_command (verb, object, commands_map):
                                 commands.append (command)
                             return commands
 
-    # print ("Command: TODO: ", verb, "object: ", object)
-    return ("Command :TODO: " + str (verb) + " object: " + str (object))
-
+    if agent_host == None:
+        return [str (verb) + " " + str (object)]
+        
     if verb == 'use':
-        # hotkey = getHotKeyForItem (objString)
-        print 
+        world_state = agent_host.getWorldState()
+        if world_state.number_of_observations_since_last_state > 0:
+            msg = world_state.observations[-1].text
+            observations = json.loads(msg)
+            if "inventory" in observations:
+                items = observations["inventory"]
+                for i in items:
+                    type = i["type"]
+                    index = i["index"]
+                    if object.text in type:
+                        return ["hotbar." + str (index + 1) + " 1"]
     elif verb == 'attack':
-        pass
+        return [str (verb) + " " + str (object)]
     elif verb == 'grab':
-        pass
+        return [str (verb) + " " + str (object)]
 
-def send_stop_command (commands_map):
+def send_stop_command (commands_map, agent_host):
     command = commands_map.get ("stop")
     return command
 
-def parse_root_verb (verb, commands_map):
-    malmo_command = get_similar_command (verb, commands_map)
+def parse_root_verb (verb, commands_map, agent_host):
+    malmo_command = get_similar_command (verb, commands_map, agent_host)
     
     if DEBUG:
         print ("malmo command: ", malmo_command)
@@ -161,7 +170,7 @@ def parse_root_verb (verb, commands_map):
         if DEBUG:
             print ("word: ", word, word.pos_)
         if word.pos == CCONJ:
-            c = send_command (malmo_command, commands_map)
+            c = send_command (malmo_command, commands_map, agent_host)
             if c:
                 commands.append (c)
         if word.pos == ADV:
@@ -169,18 +178,18 @@ def parse_root_verb (verb, commands_map):
             # move backwards
             if word.lemma_ in commands_map.get (malmo_command):
                 # print (command_map[malmo_command][word.lemma_])
-                c = send_command_option (malmo_command, word, commands_map)
+                c = send_command_option (malmo_command, word, commands_map, agent_host)
                 if c:
                     commands.append (c)
         elif word.pos == NOUN or word.pos == PROPN:
             # move 1 block forward
             # left registers
             if word.lemma_ == "left" and word.lemma_ in commands_map.get (malmo_command):
-                c = send_command_option (malmo_command, word, commands_map)
+                c = send_command_option (malmo_command, word, commands_map, agent_host)
                 if c:
                     commands.append (c)
             else:
-                c = send_object_command (malmo_command, word, commands_map)
+                c = send_object_command (malmo_command, word, commands_map, agent_host)
                 if c:
                     commands.append (c)
         elif word.pos == ADP:
@@ -188,40 +197,40 @@ def parse_root_verb (verb, commands_map):
             # move to the left
             # move to the right
             # move to
-            c = send_prop_command (malmo_command, word, commands_map)
+            c = send_prop_command (malmo_command, word, commands_map, agent_host)
             if c:
                 commands.append (c)
         elif word.pos == VERB:
             # subsequent command
             # move forward and dig
             if word.lemma_ == "stop":
-                c = send_stop_command (commands_map)
+                c = send_stop_command (commands_map, agent_host)
                 if c:
                     commands.append (c)
             else:
-                c = parse_root_verb (word, commands_map)
+                c = parse_root_verb (word, commands_map, agent_host)
                 if c:
                     for c in c:
                         commands.append (c)
     return commands
     
-def parse_string_command (string, commands_map = command_map):
+def parse_string_command (string, commands_map = command_map, agent_host = None):
     doc = nlp (string)
     commands = []
     for sentence in doc.sents:
             r = sentence.root
-            c = parse_root_verb (r, commands_map)
+            c = parse_root_verb (r, commands_map, agent_host)
             if c:
                 for c in c:
                     commands.append (c)
     return commands
 
-# if __name__ == "__main__":
-#     command = input (": ")
-#     while command.lower() != "quit":
-#         commands = parse_string_command (command, command_map)
+if __name__ == "__main__":
+    command = input (": ")
+    while command.lower() != "quit":
+        commands = parse_string_command (command, command_map)
         
-#         for c in commands:
-#             print (c)
+        for c in commands:
+            print (c)
         
-#         command = input (": ")
+        command = input (": ")
