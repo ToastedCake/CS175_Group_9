@@ -79,9 +79,6 @@ def heuristic (cell, goal):
     (a, b) = goal
     (i, j) = cell
     return max (abs (a - i), abs (b - j))
-    
-
-
 
 if __name__ == "main":
     grid = [
@@ -101,7 +98,6 @@ if __name__ == "main":
     start = (0, 0)
     goal = (6, 6)
 
-    s_x, s_y, s_z = 0, 5, 0
     s_x, s_y, s_z = 0, 5, 0
     d_x, d_y, d_z = 10, 5, 10
 
