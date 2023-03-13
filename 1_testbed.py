@@ -54,6 +54,17 @@ def getEntityDrawing():
     s += '<DrawEntity x="0.5" y="5" z="0.5" type="Pig"/>'
     s += '<DrawEntity x="30.5" y="5" z="30.5" type="Cow"/>'
     s += '<DrawEntity x="17.5" y="5" z="55.5" type="Sheep"/>'
+    s+= '<DrawBlock x="0" y="4" z="0" type="gold_block"/>'
+    s+= '<DrawBlock x="0" y="4" z="-1" type="diamond_block"/>'
+    s+= '<DrawBlock x="0" y="4" z="-2" type="diamond_block"/>'
+    s+= '<DrawBlock x="0" y="4" z="-3" type="diamond_block"/>'
+    s+= '<DrawBlock x="0" y="4" z="-4" type="diamond_block"/>'
+    s+= '<DrawBlock x="0" y="4" z="-5" type="diamond_block"/>'
+    s+= '<DrawBlock x="0" y="4" z="-6" type="diamond_block"/>'
+    s+= '<DrawBlock x="0" y="4" z="-7" type="diamond_block"/>'
+    s+= '<DrawBlock x="0" y="4" z="-8" type="diamond_block"/>'
+    s+= '<DrawBlock x="0" y="4" z="-9" type="diamond_block"/>'
+    s+= '<DrawBlock x="1" y="4" z="-9" type="diamond_block"/>'
     return s
 
 def getItemDrawing():
