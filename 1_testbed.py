@@ -116,6 +116,7 @@ def getMissionXML():
                 </ObservationFromGrid>
                 <DiscreteMovementCommands/>
                 <AbsoluteMovementCommands/>
+                <ObservationFromFullInventory flat="false"/>
                 <InventoryCommands/>
                 <MissionQuitCommands/>
             </AgentHandlers>
