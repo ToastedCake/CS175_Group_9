@@ -8,7 +8,6 @@ from word2number import w2n
 nlp = spacy.load ("en_core_web_trf")
 
 from gensim.models import KeyedVectors
-import gensim
 from gensim import models
 from gensim.models import Word2Vec
 import json
@@ -119,7 +118,13 @@ def send_command_option (verb, option, commands_map, agent_host):
 def send_prop_command (verb, prep, commands_map, agent_host):
     if prep.lemma_ in commands_map.get ("move"):
         for r in prep.rights:
-            if r.lemma_ in commands_map.get ("move"):
+            if r.pos_ == "NOUN":
+                # move to OBJECT
+                if agent_host == None:
+                    return [str (verb) + " " + str (prep) + " " + str(r)]
+                AstarSearch.move_to (agent_host, str (r))
+                return [None]
+            elif r.lemma_ in commands_map.get ("move"):
                 c = send_command_option (verb, r, commands_map, agent_host)
                 if c:
                     return c
@@ -173,6 +178,11 @@ def parse_root_verb (verb, commands_map, agent_host):
         print ("malmo command: ", malmo_command)
 
     commands = []
+    if sum (1 for r in verb.rights) == 0:
+        c = send_command (malmo_command, commands_map, agent_host)
+        if c:
+            commands.append (c)
+    
     for word in verb.rights:
         if DEBUG:
             print ("word: ", word, word.pos_)
@@ -234,6 +244,7 @@ def parse_string_command (string, commands_map = command_map, agent_host = None)
             if c:
                 for c in c:
                     commands.append (c)
+    
     if agent_host == None:
         return commands
     
