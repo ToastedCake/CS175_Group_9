@@ -7,6 +7,8 @@ import time
 import math
 import numpy as np
 
+DEBUG = True
+
 class Vertex:
     def __init__(self,x,y,z,row,col,parent,g,h,direction):
         self.x = x
@@ -65,7 +67,8 @@ def find_minf_vertex_and_remove(open_List):
             minf_Vertex = open_List[i]
             index = i
     open_List.pop(index)
-    print("successfully poped")
+    if(DEBUG):
+        print("successfully poped")
     return minf_Vertex
 
 def isInBoudary(row,col):
@@ -91,11 +94,13 @@ def isInOpenList(v,open_List):
     # time.sleep(0.5)
     for node in open_List:
         if(node.x == v.x and node.y ==v.y and node.z == v.z ):
-            if(node.f <v.f):
-                print("isInOpenList: True")
+            if(node.f <=v.f):
+                if(DEBUG):
+                    print("isInOpenList: True")
                 return True
             else:
-                print("isInOpenList: False")
+                if(DEBUG):
+                    print("isInOpenList: False")
                 return False
     return False
 
@@ -107,7 +112,7 @@ def isVisited(v,visited):
     # may have errors here due to unfamiliar with python
     for node in visited:
         if(node.x == v.x and node.y ==v.y and node.z == v.z ):
-            if(node.f <v.f):
+            if(node.f <=v.f):
                 return True
             else:
                 return False
@@ -118,7 +123,7 @@ def isDestination(v_x,v_y,v_z,dest_x,dest_y,dest_z):
     dy = v_y - dest_y
     dz = v_z - dest_z
     distance = math.sqrt(dx * dx + dy * dy + dz * dz)
-    if(distance<=1):
+    if(distance<1):
         return True
     else:
         return False
@@ -148,13 +153,14 @@ def Astar_search(agent_host,agent_location, target_location):
     open_List.append(start_vertex)
     count = 0
     while(len(open_List)>0):
-        #time.sleep(2)
-        print("=====================================================")
-        print("loop count is: ",count)
-        # print("open List before deleteion: ",open_List)
+        
         q = find_minf_vertex_and_remove(open_List)
-        # print("open List after deletion:", open_List )
-        print("q.x = ",q.x,"; q.y = ",q.y,"; q.z = ",q.z,"; q.g = ",q.g,"; q.h = ",q.h,"; q.f = ",q.f,"; q.parent =",q.parent,"; direction is ",q.direction)
+        if(DEBUG):
+            print("=====================================================")
+            print("loop count is: ",count)
+            print("Size of open List is:",len(open_List))
+            print("q.x = ",q.x,"; q.y = ",q.y,"; q.z = ",q.z,"; q.g = ",q.g,"; q.h = ",q.h,"; q.f = ",q.f,"; q.parent =",q.parent,"; direction is ",q.direction)
+            print("q.row = ",q.row,"; q.col = ",q.col)
         # create 4 successors
         # north succssor
         north_succssor_row = q.row - 1
@@ -256,33 +262,37 @@ def traceThePath(visited,dest_x,dest_y,dest_z):
     
 def movement(agent_host,v):
     agent_location = find_agent_location(agent_host)
-    dx = v.x - agent_location[0]
-    dy = v.y - agent_location[1]
-    dz = v.z - agent_location[2]
-    distance = math.sqrt(dx * dx + dy * dy + dz * dz)
-    yaw = -math.atan2(dx, dz) * 180 / math.pi
-    pitch = math.atan2(dy, distance)
-    pitch_degrees = math.degrees(pitch)
+    # dx = v.x - agent_location[0]
+    # dy = v.y - agent_location[1]
+    # dz = v.z - agent_location[2]
+    # distance = math.sqrt(dx * dx + dy * dy + dz * dz)
+    # yaw = -math.atan2(dx, dz) * 180 / math.pi
+    # pitch = math.atan2(dy, distance)
+    # pitch_degrees = math.degrees(pitch)
 
             # check to keep agent positioned correctly before a discrete move command
-    if agent_location[0] % 1 != 0.5:
-        agent_host.sendCommand(f"tpx {math.floor (agent_location[0]) + 0.5}")
-    if agent_location[2] % 1 != 0.5:
-        agent_host.sendCommand(f"tpz {math.floor (agent_location[2]) + 0.5}")
+    # time.sleep(0.1)
+    # if agent_location[0] % 1 != 0.5:
+    #     agent_host.sendCommand(f"tpx {math.floor (agent_location[0]) + 0.5}")
+    # if agent_location[2] % 1 != 0.5:
+    #     agent_host.sendCommand(f"tpz {math.floor (agent_location[2]) + 0.5}")
 
     if(v.direction == "None"):
         pass
     elif(v.direction == "North"):
         agent_host.sendCommand("movenorth 1")
+        agent_host.sendCommand("setYaw -180")
     elif(v.direction == "South"):
         agent_host.sendCommand("movesouth 1")
+        agent_host.sendCommand("setYaw 0")
     elif(v.direction == "East"):
         agent_host.sendCommand("moveeast 1")
+        agent_host.sendCommand("setYaw -90")
     elif(v.direction == "West"):
         agent_host.sendCommand("movewest 1")
+        agent_host.sendCommand("setYaw 90")
 
-    agent_host.sendCommand(f"setYaw {yaw}")
-    agent_host.sendCommand(f"setPitch {pitch_degrees}")
+    #agent_host.sendCommand(f"setPitch {pitch_degrees}")
 
     return 
     
@@ -334,7 +344,7 @@ def move_to(agent_host,entityName):
         return
     
     for v in path:
-        print(v.direction)
+        print(v.x,v.y,v.z,v.direction)
         movement(agent_host,v)
 
     return 
