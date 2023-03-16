@@ -438,8 +438,25 @@ def find_entity_location(agent_host,entityName):
     if 'entities' in observations:
         for entity in observations['entities']:
             if entity['name'] == entityName:
+                return (entity['x'], entity['y'], entity['z'], entity['id'])
+    return None
+
+def find_entityID_location(agent_host,entityID):
+    world_state = agent_host.getWorldState()
+    while world_state.number_of_observations_since_last_state == 0:
+        time.sleep(0.1)
+        world_state = agent_host.getWorldState()
+        if world_state.is_mission_running == False:
+            return None
+    msg = world_state.observations[-1].text
+    observations = json.loads(msg)
+    #print(observations)
+    if 'entities' in observations:
+        for entity in observations['entities']:
+            if entity['id'] == entityID:
                 return (entity['x'], entity['y'], entity['z'])
     return None
+
 def find_agent_location(agent_host):
     world_state = agent_host.getWorldState()
     while world_state.number_of_observations_since_last_state == 0:
@@ -452,7 +469,7 @@ def find_agent_location(agent_host):
     if 'entities' in observations:
         for entity in observations['entities']:
             if entity['name'] == 'Agent':
-                return (entity['x'], entity['y'], entity['z'])
+                return (entity['x'], entity['y'], entity['z'], entity['yaw'])
     return None
 
 def move_to(agent_host,entityName,mode):
@@ -488,3 +505,80 @@ def move_to(agent_host,entityName,mode):
         bruteForce(agent_host,entityName)
 
     return 
+
+def chase_entity (agent_host, entityName, entityID):
+    world_state = agent_host.getWorldState()
+    if world_state.number_of_observations_since_last_state > 0:
+        msg = world_state.observations[-1].text
+        observations = json.loads(msg)
+        
+        entity_location = find_entityID_location (agent_host, entityID)
+        agent_location = find_agent_location (agent_host)
+        
+        if entity_location is None:
+            print("There is no " + entityName + " nearby the agent")
+            return
+        if agent_location is None:
+            return
+
+        target_x, target_y, target_z = entity_location[0], entity_location[1], entity_location[2]
+        current_x, current_y, current_z, current_yaw = agent_location[0], agent_location[1], agent_location[2], agent_location[3]
+        
+        # check to keep agent positioned correctly before a discrete move command
+        if current_x % 1 != 0.5:
+            agent_host.sendCommand(f"tpx {math.floor (current_x) + 0.5}")
+        if current_z % 1 != 0.5:
+            agent_host.sendCommand(f"tpz {math.floor (current_z) + 0.5}")
+
+        dx = target_x - current_x
+        dy = target_y - current_y + 1
+        dz = target_z - current_z
+        distance = math.sqrt(dx * dx + dy * dy + dz * dz)
+        yaw = -math.atan2(dx, dz) * 180 / math.pi
+        pitch = math.atan2(dy, distance)
+        pitch_degrees = math.degrees(pitch)
+
+        difference = yaw - current_yaw;
+        while difference < -180:
+            difference += 360
+        while difference > 180:
+            difference -= 360
+        difference /= 180.0
+
+        agent_host.sendCommand("turn " + str(difference))
+        
+        if distance <= 1:
+            agent_host.sendCommand("move -1")
+        if distance <= 3:
+            # Use the line-of-sight observation to determine when to hit and when not to hit:
+            if "LineOfSight" in observations:
+                los = observations[u'LineOfSight']
+                type = los["type"]
+                if type == entityName:
+                    agent_host.sendCommand("attack 1")
+                    print ("attack")
+                    agent_host.sendCommand("attack 0")
+            agent_host.sendCommand(f"setPitch {pitch_degrees}")        
+            print("\nAlready at "+ entityName+"'s location.")
+        
+        dx = math.floor (dx)
+        dz = math.floor (dz)
+        if(dx>0):
+            agent_host.sendCommand(f"setPitch {pitch_degrees}")
+            agent_host.sendCommand("moveeast 1")
+        elif(dx<0):
+            agent_host.sendCommand(f"setPitch {pitch_degrees}")
+            agent_host.sendCommand("movewest 1")
+        elif(dx == 0):
+            agent_host.sendCommand("strafe 0")
+        
+        if(dz>0):
+            agent_host.sendCommand(f"setPitch {pitch_degrees}")
+            agent_host.sendCommand("movesouth 1")
+        elif(dz<0):
+            agent_host.sendCommand(f"setPitch {pitch_degrees}")
+            agent_host.sendCommand("movenorth 1")
+        elif(dz==0):
+            agent_host.sendCommand("strafe 0")
+
+        world_state = agent_host.getWorldState()
