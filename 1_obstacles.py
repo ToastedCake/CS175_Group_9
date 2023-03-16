@@ -28,7 +28,7 @@ import os
 import sys
 import time
 import math
-import AstarSearch as find
+import Astar_bfs_bruteForce as find
 #import nlp_parser
 
 obs_x_range = 100
@@ -65,7 +65,7 @@ def getItemDrawing():
     """Create the XML for the items."""
     s = ""
     s += '<DrawItem x="0" y="5" z="-10" type="diamond_sword"/>'
-    s += '<DrawItem x="-20" y="5" z="30" type="diamond_pickaxe"/>'
+    # s += '<DrawItem x="-20" y="5" z="30" type="diamond_pickaxe"/>'
     return s
 
 def getMissionXML():
@@ -161,8 +161,9 @@ print()
 print("Mission running", end='')
 #################################################
 # Find the closet entity's location on the map and move the agent toward it
-#find.move_to(agent_host,"diamond_pickaxe")
-find.move_to(agent_host,"diamond_sword")
+find.move_to(agent_host,"diamond_sword",0)
+# find.move_to(agent_host,"diamond_sword",1)
+# find.move_to(agent_host,"diamond_sword",2)
 ######################################################
 # Loop until mission ends:
 while world_state.is_mission_running:
