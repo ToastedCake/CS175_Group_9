@@ -28,7 +28,7 @@ import os
 import sys
 import time
 import math
-import AstarSearch as find
+import Astar_bfs_bruteForce as find
 import nlp_parser
 
 obs_x_range = 100
