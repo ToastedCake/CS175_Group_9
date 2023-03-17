@@ -122,7 +122,7 @@ def send_prop_command (verb, prep, commands_map, agent_host):
                 # move to OBJECT
                 if agent_host == None:
                     return [str (verb) + " " + str (prep) + " " + str(r)]
-                AstarSearch.move_to (agent_host, str (r))
+                find.move_to (agent_host, str (r))
                 return [None]
             elif r.lemma_ in commands_map.get ("move"):
                 c = send_command_option (verb, r, commands_map, agent_host)
