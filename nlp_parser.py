@@ -11,7 +11,7 @@ from gensim.models import KeyedVectors
 from gensim import models
 from gensim.models import Word2Vec
 import json
-import AstarSearch
+import Astar_bfs_bruteForce as find
 import math
 import time
 
@@ -147,7 +147,7 @@ def send_object_command (verb, object, commands_map, agent_host):
         return [str (verb) + " " + str (object)]
     
     if verb == "get":
-        AstarSearch.move_to (agent_host, str (object))
+        find.move_to (agent_host, str (object))
         return [None]
 
     if verb == "use":
@@ -227,7 +227,7 @@ def parse_root_verb (verb, commands_map, agent_host):
 
 def check_agent_pos (agent_host):
         # check to keep agent positioned correctly before a discrete move command
-    agent_location = AstarSearch.find_agent_location(agent_host)
+    agent_location = find.find_agent_location(agent_host)
     if agent_location:
         if agent_location[0] % 1 != 0.5:
             agent_host.sendCommand(f"tpx {math.floor (agent_location[0]) + 0.5}")
