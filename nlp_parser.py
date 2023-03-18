@@ -8,12 +8,11 @@ from word2number import w2n
 nlp = spacy.load ("en_core_web_trf")
 
 from gensim.models import KeyedVectors
-from gensim import models
-from gensim.models import Word2Vec
 import json
 import Astar_bfs_bruteForce as find
 import math
 import time
+import speech_recognition as sr
 
 # Load pretrained model (since intermediate data is not included, the model cannot be refined with additional data)
 #model = Word2Vec.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True, norm_only=True) -> Deprecated
@@ -61,10 +60,19 @@ command_map = {
         }
 
 def word_similarity_score (word1, word2):
+    """
+    Returns the similarity score between the two words
+    """
+
     score = model.similarity (word1, word2)
     return score
 
 def get_best_match (word, commands_map, threshold):
+    """
+    Returns the command defined in the command map
+    with the highest similarity score with word
+    """
+
     scores = []
     for commands in commands_map:
         score = word_similarity_score (word, commands)
@@ -74,6 +82,11 @@ def get_best_match (word, commands_map, threshold):
     return command
 
 def get_similar_command (verb, commands_map, agent_host):
+    """
+    Returns the closest matching malmo command defined in the commands map
+    within a certain threshold
+    """
+    
     lemma_verb = verb.lemma_
     # synonyms?
     # left
@@ -85,12 +98,20 @@ def get_similar_command (verb, commands_map, agent_host):
     return command
 
 def send_command (verb, commands_map, agent_host):
+    """
+    Returns basic malmo command
+    """
+
     if str (verb) == "stop":
         return send_stop_command (commands_map, agent_host)
     command = commands_map.get (str (verb)).get('')
     return [command]
  
 def send_command_option (verb, option, commands_map, agent_host):
+    """
+    Returns basic malmo command with its option argument
+    """
+
     for a in option.ancestors:
         if a.pos == VERB:
             for r in a.rights:
@@ -115,7 +136,11 @@ def send_command_option (verb, option, commands_map, agent_host):
     command = commands_map.get (verb).get (option.lemma_)
     return [command]
 
-def send_prop_command (verb, prep, commands_map, agent_host):
+def send_prep_command (verb, prep, commands_map, agent_host):
+    """
+    Returns adposition (preposition) command
+    """
+
     if prep.lemma_ in commands_map.get ("move"):
         for r in prep.rights:
             if r.pos_ == "NOUN":
@@ -130,6 +155,10 @@ def send_prop_command (verb, prep, commands_map, agent_host):
                     return c
 
 def send_object_command (verb, object, commands_map, agent_host):
+    """
+    Returns command for object agent interaction
+    """
+
     for l in object.lefts:
         if l.pos == NUM:  
             for a in l.ancestors:
@@ -168,10 +197,17 @@ def send_object_command (verb, object, commands_map, agent_host):
         return [str (verb) + " " + str (object)]
 
 def send_stop_command (commands_map, agent_host):
+    """
+    Returns stop command to stop all agent's movement
+    """
     command = commands_map.get ("stop")
     return command
 
 def parse_root_verb (verb, commands_map, agent_host):
+    """
+    Parses root verb (malmo command)
+    """
+
     malmo_command = get_similar_command (verb, commands_map, agent_host)
     
     if DEBUG:
@@ -210,7 +246,7 @@ def parse_root_verb (verb, commands_map, agent_host):
             # move to the left
             # move to the right
             # move to
-            c = send_prop_command (malmo_command, word, commands_map, agent_host)
+            c = send_prep_command (malmo_command, word, commands_map, agent_host)
             if c:
                 commands.append (c)        
         elif word.pos == NOUN or word.pos == PROPN:
@@ -226,7 +262,10 @@ def parse_root_verb (verb, commands_map, agent_host):
     return commands
 
 def check_agent_pos (agent_host):
-        # check to keep agent positioned correctly before a discrete move command
+    """
+    Check to keep agent positioned correctly before a discrete move command
+    """
+    
     agent_location = find.find_agent_location(agent_host)
     if agent_location:
         if agent_location[0] % 1 != 0.5:
@@ -236,6 +275,10 @@ def check_agent_pos (agent_host):
 
 
 def parse_string_command (string, commands_map = command_map, agent_host = None):
+    """
+    Parses string command and sends the parsed commands to the agent
+    """
+    
     doc = nlp (string)
     commands = []
     for sentence in doc.sents:
@@ -257,12 +300,35 @@ def parse_string_command (string, commands_map = command_map, agent_host = None)
                     agent_host.sendCommand (c)
             time.sleep(1)
 
-if __name__ == "__main__":
-    command = input (": ")
-    while command.lower() != "quit":
-        commands = parse_string_command (command, command_map)
-        
-        for c in commands:
-            print (c)
-        
-        command = input (": ")
+def recognize_speech_command (audio_file):
+    """
+    Recognizes speech and returns its query
+    """
+
+    r = sr.Recognizer()
+
+    if audio_file:
+        microphone = sr.AudioFile (audio_file)
+    else:
+        microphone = sr.Microphone()
+    
+    with microphone as source:
+        print("Listening...")
+        r.pause_threshold = 1
+        audio = r.listen(source)
+  
+    try:
+        print("Recognizing...")   
+        query = r.recognize_google(audio, language ='en-in')
+  
+    except Exception as e:
+        print(e)   
+        print("Unable to Recognize your voice.") 
+        return "None"
+     
+    return query
+
+def parse_speech_command (audio_file = None, commands_map = command_map, agent_host = None):
+
+    query = recognize_speech_command (audio_file)
+    parse_string_command (query, commands_map, agent_host)
