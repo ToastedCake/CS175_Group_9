@@ -606,7 +606,91 @@ def bfs(agent_host,agent_location, target_location):
         count+=1
     #end of while
     return visited
+
 ##########################################################
+
+def find_nearest_trees (agent_host):
+    """
+    Returns a dict of tree locations and distance pairs (x, z : distance)
+    sorted by increasing distance
+    """
+
+    graph, center_layer, center_row, center_col = create_Graph (agent_host)
+    ind = np.argwhere(graph[center_layer:, :, :] == "log")
+
+    agent_location = find_agent_location (agent_host)
+    if agent_location is None:
+        return
+
+    current_x, current_y, current_z = agent_location[0], agent_location[1], agent_location[2]
+    trees = {}
+    for coords in ind:
+        target_x = coords[2] - center_col
+        target_y = 5
+        target_z = coords[1] - center_row
+        dx = target_x - current_x
+        dy = target_y - current_y
+        dz = target_z - current_z
+        distance = math.sqrt(dx * dx + dy * dy + dz * dz)
+        trees[(target_x, target_z)] = distance    
+    
+    sorted_trees = sorted (trees.items(), key = lambda x:x[1])
+    return sorted_trees
+
+def find_nearest_tree (agent_host):
+    """
+    Finds nearest trees and moves the agents towards it
+    """
+
+    trees = find_nearest_trees (agent_host)
+    if len (trees) == 0:
+        return
+    print (trees)
+    coords, distance = trees[0]
+    (x, z) = coords
+    # steve height
+    y = 5
+    move_to_location (agent_host, [x, y, z], 0)
+
+
+def find_nearest_entity_locations (agent_host, entityName):
+    """
+    Returns dict of entityID distance pairs (entityID : distance)
+    sorted by increasing distance
+    """
+
+    world_state = agent_host.getWorldState()
+    while world_state.number_of_observations_since_last_state == 0:
+        time.sleep(0.1)
+        world_state = agent_host.getWorldState()
+        if world_state.is_mission_running == False:
+            return None
+    msg = world_state.observations[-1].text
+    observations = json.loads(msg)
+
+    agent_location = find_agent_location (agent_host)
+    if agent_location is None:
+        return
+
+    current_x, current_y, current_z = agent_location[0], agent_location[1], agent_location[2]
+    if 'entities' in observations:
+        entities = {}
+        for entity in observations['entities']:
+            if entity['name'] == entityName:
+                target_x = entity['x']
+                target_y = entity['y']
+                target_z = entity['z']
+                entity_id = entity['id']
+                
+                dx = target_x - current_x
+                dy = target_y - current_y + 1
+                dz = target_z - current_z
+                distance = math.sqrt(dx * dx + dy * dy + dz * dz)
+                entities[entity_id] = distance
+    
+    sorted_entities = sorted (entities.items(), key = lambda x:x[1])
+    return sorted_entities
+
 def find_entity_location(agent_host,entityName):
     world_state = agent_host.getWorldState()
     while world_state.number_of_observations_since_last_state == 0:
@@ -616,7 +700,7 @@ def find_entity_location(agent_host,entityName):
             return None
     msg = world_state.observations[-1].text
     observations = json.loads(msg)
-    #print(observations)
+    
     if 'entities' in observations:
         for entity in observations['entities']:
             if entity['name'] == entityName:
@@ -624,15 +708,19 @@ def find_entity_location(agent_host,entityName):
     return None
 
 def find_entityID_location(agent_host,entityID):
+    """
+    Finds entity with entityID and returns its coordinates (x, y, z) 
+    """
+    
     world_state = agent_host.getWorldState()
     while world_state.number_of_observations_since_last_state == 0:
         time.sleep(0.1)
         world_state = agent_host.getWorldState()
         if world_state.is_mission_running == False:
             return None
+    
     msg = world_state.observations[-1].text
     observations = json.loads(msg)
-    #print(observations)
     if 'entities' in observations:
         for entity in observations['entities']:
             if entity['id'] == entityID:
@@ -651,7 +739,7 @@ def find_agent_location(agent_host):
     if 'entities' in observations:
         for entity in observations['entities']:
             if entity['name'] == 'Agent':
-                return (entity['x'], entity['y'], entity['z'])
+                return (entity['x'], entity['y'], entity['z'], entity['yaw'])
     return None
 
 def move_to(agent_host,entityName,mode):
@@ -688,7 +776,47 @@ def move_to(agent_host,entityName,mode):
 
     return 
 
+def move_to_location (agent_host, location, mode):
+    """
+    Moves agent to location's coordinates location = (x, y, z)
+    """
+    
+    agent_location = find_agent_location(agent_host)
+    
+    if agent_location is None:
+        return
+    
+    #Use Astar
+    if(mode == 0):
+        visited_nodes = Astar_search(agent_host, agent_location, location)
+        path = traceThePath(visited_nodes, location[0], location[1], location[2])
+        if(len(path) == 0):
+            print("No path Found")
+            return
+        for v in path:
+            print(v.x,v.y,v.z,v.direction)
+            movement(agent_host,v)
+    #Use bfs
+    if(mode == 1):
+        visited_nodes = bfs(agent_host, agent_location, location)
+        path = traceThePath(visited_nodes, location[0], location[1], location[2])
+        if(len(path) == 0):
+            print("No path Found")
+            return
+        for v in path:
+            print(v.x,v.y,v.z,v.direction)
+            movement(agent_host,v)
+    #Use Brute Force
+    # elif(mode == 2):
+    #     bruteForce(agent_host,entityName)
+
+    return 
+
 def chase_entity (agent_host, entityName, entityID):
+    """
+    Makes the agent chase and attack an entity with entityID
+    """
+
     world_state = agent_host.getWorldState()
     if world_state.number_of_observations_since_last_state > 0:
         msg = world_state.observations[-1].text
