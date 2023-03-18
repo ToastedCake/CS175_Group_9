@@ -27,7 +27,7 @@ import os
 import sys
 import time
 import math
-import AstarSearch as find
+import Astar_bfs_bruteForce as find
 import numpy as np
 #import nlp_parser
 
@@ -66,6 +66,14 @@ def getItemDrawing():
     s += '<DrawItem x="-20" y="5" z="30" type="diamond_pickaxe"/>'
     return s
 
+def getEntityDrawing():
+    """Create the XML for the entities."""
+    s = ""
+    s += '<DrawEntity x="10.5" y="5" z="10.5" type="Pig"/>'
+    # s += '<DrawEntity x="30.5" y="5" z="30.5" type="Cow"/>'
+    # s += '<DrawEntity x="17.5" y="5" z="55.5" type="Sheep"/>'
+    return s
+
 def getMissionXML():
 
     return '''
@@ -84,7 +92,7 @@ def getMissionXML():
             <ServerHandlers>
                 <FlatWorldGenerator generatorString="3;7,3*3,2;131;biome_1(distance=10),village,decoration,dungeon"/>
                 <DrawingDecorator>
-                    '''+ getItemDrawing() + getBlockDrawing()+ '''
+                    '''+ getItemDrawing() + getBlockDrawing()+getEntityDrawing()+'''
                 </DrawingDecorator>
                 <ServerQuitFromTimeUp timeLimitMs="50000"/>
                 <ServerQuitWhenAnyAgentFinishes />
@@ -93,7 +101,7 @@ def getMissionXML():
         <AgentSection mode="Survival">
             <Name>Agent</Name>
             <AgentStart>
-                <Placement x="0" y="5" z="0"/>
+                <Placement x="0.5" y="5" z="0.5"/>
             </AgentStart>
             <AgentHandlers>
                 <ObservationFromNearbyEntities>
@@ -101,8 +109,8 @@ def getMissionXML():
                 </ObservationFromNearbyEntities>
                 <ObservationFromGrid>                      
                 <Grid name="grid_observation">                        
-                <min x="-2" y="0" z="-2"/>                        
-                <max x="2" y="0" z="2"/>                    
+                <min x="-59" y="-2" z="-59"/>                        
+                <max x="59" y="3" z="59"/>                    
                 </Grid>                  
                 </ObservationFromGrid>
                 <DiscreteMovementCommands/>
@@ -165,13 +173,18 @@ while world_state.number_of_observations_since_last_state == 0:
     time.sleep(0.1)
     world_state = agent_host.getWorldState()
 time.sleep(1)
-world_state = agent_host.getWorldState()
-msg = world_state.observations[-1].text
-observations = json.loads(msg)
-print(observations)
-graph = observations["grid_observation"] # 1d array
-graph = np.reshape(graph,(5,5))
-print(graph)
+# world_state = agent_host.getWorldState()
+# msg = world_state.observations[-1].text
+# observations = json.loads(msg)
+# print(observations)
+# graph = observations["grid_observation"] # 1d array
+# graph = np.reshape(graph,(5,5))
+# print(graph)
+
+find.find_nearest_tree (agent_host)
+entity = find.find_nearest_entity (agent_host, "Pig")
+print (entity)
+
 ######################################################
 # Loop until mission ends:
 while world_state.is_mission_running:
