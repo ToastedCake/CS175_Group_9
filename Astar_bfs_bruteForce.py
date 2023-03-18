@@ -645,7 +645,6 @@ def find_nearest_tree (agent_host):
     trees = find_nearest_trees (agent_host)
     if len (trees) == 0:
         return
-    print (trees)
     coords, distance = trees[0]
     (x, z) = coords
     # steve height
@@ -690,6 +689,18 @@ def find_nearest_entity_locations (agent_host, entityName):
     
     sorted_entities = sorted (entities.items(), key = lambda x:x[1])
     return sorted_entities
+
+def find_nearest_entity (agent_host, entityName):
+    """
+    Returns the location (x, y, z) and entityID of the nearest entity
+    """
+
+    entities = find_nearest_entity_locations (agent_host, entityName)
+    if len (entities) == 0:
+        return
+    entityID, distance = entities[0]
+    coords = find_entityID_location (agent_host, entityID)
+    return coords, entityID
 
 def find_entity_location(agent_host,entityName):
     world_state = agent_host.getWorldState()
