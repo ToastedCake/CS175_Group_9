@@ -41,10 +41,8 @@ command_map = {
                 "to": "OBJECT"
             },
             "strafe": {"right": "strafe 1", "left": "strafe -1", "stop": ["strafe 0"]},
-            "turn": {"right": "turn 1", "left": "turn -1", "stop": ["turn 0", "pitch 0"],
-                     "up": "pitch -1", "down": "pitch 1"},
-            "look": {"up": "look -1", "down": "look 1"},
-            "pitch": {"up": "pitch -1", "down": "pitch 1", "stop": ["pitch 0"]},
+            "turn": {"right": "setPitch yaw + 90", "left": "setPitch yaw - 90",
+                     "up": "setPitch -90", "down": "setPitch 90"},
             "jump": {
                 "": "jump 1", "up": "jump 1", "stop": ["jump 0"], "forward": "jumpmove 1", "back": "jumpmove -1",
                 "backwards": "jumpmove -1", "right": "jumpstrafe 1", "left": "jumpstrafe -1",
@@ -112,6 +110,20 @@ def send_command_option (verb, option, commands_map, agent_host):
     Returns basic malmo command with its option argument
     """
 
+    if verb == "turn":
+        if agent_host == None:
+            command = commands_map.get (verb).get (option.lemma_)
+            return [command]
+        current_x, current_y, current_z, current_yaw = find.find_agent_location (agent_host)
+        if option.lemma_ == "left":
+            yaw = current_yaw - 90 # left
+        elif option.lemma_ == "right":
+            yaw = current_yaw + 90 # right
+        else:
+            command = commands_map.get (verb).get (option.lemma_)
+            return [command]
+        find.turn_agent (agent_host, yaw)
+
     for a in option.ancestors:
         if a.pos == VERB:
             for r in a.rights:
@@ -153,6 +165,10 @@ def send_prep_command (verb, prep, commands_map, agent_host):
                 c = send_command_option (verb, r, commands_map, agent_host)
                 if c:
                     return c
+    elif prep.lemma_ in commands_map.get ("turn"):
+        c = send_command_option (verb, prep, commands_map, agent_host)
+        if c:
+            return c
 
 def send_object_command (verb, object, commands_map, agent_host):
     """
@@ -257,7 +273,11 @@ def parse_root_verb (verb, commands_map, agent_host):
         elif word.pos == CCONJ:
             c = send_command (malmo_command, commands_map, agent_host)
             if c:
-                commands.append (c)                
+                commands.append (c)
+        else:
+            c = send_command_option (malmo_command, word, commands_map, agent_host)
+            if c:
+                commands.append (c)              
 
     return commands
 
