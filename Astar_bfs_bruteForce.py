@@ -416,33 +416,55 @@ def traceThePath(visited,dest_x,dest_y,dest_z):
     
     return path
     
-def movement(agent_host,v):
+def movement(agent_host,v,turn = False):
+    """
+    Moves agent to direction v
+    if turn is True turns agent with turn (smooth)
+    if turn is False turns agent with setYaw (immediate)
+    """
+
     time.sleep(0.1) #without this, the agent doesn't move
     if(v.direction == "None"):
         return
     elif(v.direction == "North" or v.direction == "North_Down"):
         agent_host.sendCommand("movenorth 1")
+        if turn:
+            turn_agent (agent_host, -180)
         agent_host.sendCommand("setYaw -180")
     elif(v.direction == "North_Up"):
         agent_host.sendCommand("jumpnorth 1")
+        if turn:
+            turn_agent (agent_host, -180)
         agent_host.sendCommand("setYaw -180")
     elif(v.direction == "South" or v.direction == "South_Down"):
         agent_host.sendCommand("movesouth 1")
+        if turn:
+            turn_agent (agent_host, 0)
         agent_host.sendCommand("setYaw 0")
     elif(v.direction == "South_Up"):
         agent_host.sendCommand("jumpsouth 1")
+        if turn:
+            turn_agent (agent_host, 0)
         agent_host.sendCommand("setYaw 0")
     elif(v.direction == "East" or v.direction == "East_Down"):
         agent_host.sendCommand("moveeast 1")
+        if turn:
+            turn_agent (agent_host, -90)
         agent_host.sendCommand("setYaw -90")
     elif(v.direction == "East_Up"):
         agent_host.sendCommand("jumpeast 1")
+        if turn:
+            turn_agent (agent_host, -90)
         agent_host.sendCommand("setYaw -90")
     elif(v.direction == "West" or v.direction == "West_Down"):
         agent_host.sendCommand("movewest 1")
+        if turn:
+            turn_agent (agent_host, 90)
         agent_host.sendCommand("setYaw 90")
     elif(v.direction == "West_Up"):
         agent_host.sendCommand("jumpwest 1")
+        if turn:
+            turn_agent (agent_host, 90)
         agent_host.sendCommand("setYaw 90")
 
     return 
@@ -903,3 +925,21 @@ def chase_entity (agent_host, entityName, entityID):
             agent_host.sendCommand("strafe 0")
 
         world_state = agent_host.getWorldState()
+
+def turn_agent (agent_host, yaw):
+    """
+    Smoothly turns agent to given yaw
+    """
+    current_x, current_y, current_z, current_yaw = find_agent_location (agent_host)
+    difference = yaw - current_yaw;
+    while round(current_yaw) != round(yaw):
+        current_x, current_y, current_z, current_yaw = find_agent_location (agent_host)
+        difference = yaw - current_yaw;
+        while difference < -180:
+            difference += 360
+        while difference > 180:
+            difference -= 360
+        difference /= 180.0
+        agent_host.sendCommand ("turn " + str (difference))
+    agent_host.sendCommand ("turn 0")
+    agent_host.sendCommand ("setYaw " + str (yaw))
