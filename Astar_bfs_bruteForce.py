@@ -7,7 +7,7 @@ import time
 import math
 import numpy as np
 
-DEBUG = True
+DEBUG = False
 
 obs_x_range = 119 # must be odd and match the range of observationFromGrid
 obs_y_range = 6   # must match the range of observationFromGrid
@@ -423,49 +423,54 @@ def movement(agent_host,v,turn = False):
     if turn is False turns agent with setYaw (immediate)
     """
 
+    turn = True
     time.sleep(0.1) #without this, the agent doesn't move
+    
+    # Check to keep agent in position
+    check_agent_pos (agent_host)
+    print (v.direction)
     if(v.direction == "None"):
         return
     elif(v.direction == "North" or v.direction == "North_Down"):
+        if turn:
+            turn_agent (agent_host, 180)
+        agent_host.sendCommand("setYaw 180")        
         agent_host.sendCommand("movenorth 1")
-        if turn:
-            turn_agent (agent_host, -180)
-        agent_host.sendCommand("setYaw -180")
     elif(v.direction == "North_Up"):
+        if turn:
+            turn_agent (agent_host, 180)
+        agent_host.sendCommand("setYaw 180")
         agent_host.sendCommand("jumpnorth 1")
-        if turn:
-            turn_agent (agent_host, -180)
-        agent_host.sendCommand("setYaw -180")
     elif(v.direction == "South" or v.direction == "South_Down"):
+        if turn:
+            turn_agent (agent_host, 0)
+        agent_host.sendCommand("setYaw 0")
         agent_host.sendCommand("movesouth 1")
-        if turn:
-            turn_agent (agent_host, 0)
-        agent_host.sendCommand("setYaw 0")
     elif(v.direction == "South_Up"):
-        agent_host.sendCommand("jumpsouth 1")
         if turn:
             turn_agent (agent_host, 0)
         agent_host.sendCommand("setYaw 0")
+        agent_host.sendCommand("jumpsouth 1")
     elif(v.direction == "East" or v.direction == "East_Down"):
+        if turn:
+            turn_agent (agent_host, -90)
+        agent_host.sendCommand("setYaw -90")
         agent_host.sendCommand("moveeast 1")
-        if turn:
-            turn_agent (agent_host, -90)
-        agent_host.sendCommand("setYaw -90")
     elif(v.direction == "East_Up"):
-        agent_host.sendCommand("jumpeast 1")
         if turn:
             turn_agent (agent_host, -90)
         agent_host.sendCommand("setYaw -90")
+        agent_host.sendCommand("jumpeast 1")
     elif(v.direction == "West" or v.direction == "West_Down"):
+        if turn:
+            turn_agent (agent_host, 90)
+        agent_host.sendCommand("setYaw 90")
         agent_host.sendCommand("movewest 1")
-        if turn:
-            turn_agent (agent_host, 90)
-        agent_host.sendCommand("setYaw 90")
     elif(v.direction == "West_Up"):
-        agent_host.sendCommand("jumpwest 1")
         if turn:
             turn_agent (agent_host, 90)
         agent_host.sendCommand("setYaw 90")
+        agent_host.sendCommand("jumpwest 1")
 
     return 
 
@@ -638,18 +643,19 @@ def find_nearest_trees (agent_host):
     """
 
     graph, center_layer, center_row, center_col = create_Graph (agent_host)
-    ind = np.argwhere(graph[center_layer:, :, :] == "log")
+    ind = np.argwhere (graph[center_layer:, :, :] == "log")
 
     agent_location = find_agent_location (agent_host)
     if agent_location is None:
         return
-
     current_x, current_y, current_z = agent_location[0], agent_location[1], agent_location[2]
     trees = {}
     for coords in ind:
-        target_x = coords[2] - center_col
+        # offset by center column and current x coordinate
+        target_x = coords[2] - center_col + current_x
         target_y = 5
-        target_z = coords[1] - center_row
+        # offset by center row and current z coordinate
+        target_z = coords[1] - center_row + current_z
         dx = target_x - current_x
         dy = target_y - current_y
         dz = target_z - current_z
@@ -671,7 +677,112 @@ def find_nearest_tree (agent_host):
     (x, z) = coords
     # steve height
     y = 5
-    move_to_location (agent_host, [x, y, z], 0)
+    location = np.ceil ([x - 1, y, z])
+    move_to_location (agent_host, location, 0)
+    check_agent_pos (agent_host)
+    
+    # face the tree
+    current_x, current_y, current_z, current_yaw = find_agent_location (agent_host)
+    dx = x - current_x
+    dz = z - current_z
+    yaw = -math.atan2(dx, dz) * 180 / math.pi
+    if abs (yaw) != abs (current_yaw):
+        turn_agent (agent_host, yaw)
+
+def chop_tree (agent_host):
+    """
+    Chops down the tree in front of the agent
+    """
+    
+    block = 0
+    while True:
+        world_state = agent_host.getWorldState()
+        if world_state.number_of_observations_since_last_state > 0:
+            msg = world_state.observations[-1].text
+            observations = json.loads(msg)
+            if "LineOfSight" not in observations:
+                agent_host.sendCommand ("turn 0.1")
+            elif "LineOfSight" in observations:
+                los = observations["LineOfSight"]
+                type = los["type"]
+                inRange = los["distance"] <= 1
+                
+                if not inRange and type != "log":
+                    agent_host.sendCommand ("turn 0.1")
+                
+                if inRange and type == "log" and block == 0:
+                    agent_host.sendCommand ("turn 0")
+                    agent_host.sendCommand ("attack 1")
+
+                    while True:
+                        world_state = agent_host.getWorldState()
+                        while world_state.number_of_observations_since_last_state == 0:
+                            time.sleep (0.1)
+                            world_state = agent_host.getWorldState()
+                        msg = world_state.observations[-1].text
+                        observations = json.loads(msg)
+                        if "LineOfSight" in observations:
+                            los = observations["LineOfSight"]
+                            type = los["type"]
+                            inRange = los["distance"] <= 1
+                            if not inRange and block == 0:
+                                block = 1                
+                                agent_host.sendCommand ("attack 0")
+                                agent_host.sendCommand ("setPitch 45")
+                                agent_host.sendCommand ("attack 1")
+                                continue
+                            else:
+                                agent_host.sendCommand ("attack 1")
+                        else:
+                            agent_host.sendCommand ("attack 0")
+                            agent_host.sendCommand ("setPitch 45")
+                            agent_host.sendCommand ("attack 1")
+                            continue
+                    
+                        if block == 1:
+                            if not inRange:
+                                agent_host.sendCommand ("attack 0")
+                                block = 2
+
+                        if not inRange and block == 2:
+                            check_agent_pos (agent_host)
+                            time.sleep (1)
+                            agent_host.sendCommand ("move 1")
+                            agent_host.sendCommand ("attack 0")
+                            time.sleep (1)
+                            agent_host.sendCommand ("setPitch -90")
+                            time.sleep (1)
+                            agent_host.sendCommand ("attack 1")
+                            time.sleep (1)
+                            while True:
+                                world_state = agent_host.getWorldState()
+                                while world_state.number_of_observations_since_last_state == 0:
+                                    time.sleep (1)
+                                    world_state = agent_host.getWorldState()
+                                msg = world_state.observations[-1].text
+                                observations = json.loads(msg)
+                                if "LineOfSight" in observations:
+                                    los = observations["LineOfSight"]
+                                    type = los["type"]
+                                    inRange = los["distance"] <= 3
+                                    if not inRange:
+                                        agent_host.sendCommand ("setPitch 0")
+                                        agent_host.sendCommand ("attack 0")
+                                        block = 3
+                                        break
+                                else:
+                                    agent_host.sendCommand ("setPitch 0")
+                                    agent_host.sendCommand ("attack 0")
+                                    block = 3
+                                    break
+
+                            if block == 3:
+                                break
+                        if block == 3:
+                            break
+                    if block == 3:
+                        break
+        time.sleep(1)
 
 
 def find_nearest_entity_locations (agent_host, entityName):
@@ -895,12 +1006,13 @@ def chase_entity (agent_host, entityName, entityID):
         if distance <= 3:
             # Use the line-of-sight observation to determine when to hit and when not to hit:
             if "LineOfSight" in observations:
-                los = observations[u'LineOfSight']
+                los = observations["LineOfSight"]
                 type = los["type"]
                 if type == entityName:
-                    agent_host.sendCommand("attack 1")
-                    print ("attack")
-                    agent_host.sendCommand("attack 0")
+                    agent_host.sendCommand ("attack 1")
+                    if DEBUG:
+                        print ("attack")
+                    agent_host.sendCommand ("attack 0")
             agent_host.sendCommand(f"setPitch {pitch_degrees}")        
             print("\nAlready at "+ entityName+"'s location.")
         
@@ -941,5 +1053,18 @@ def turn_agent (agent_host, yaw):
             difference -= 360
         difference /= 180.0
         agent_host.sendCommand ("turn " + str (difference))
+
     agent_host.sendCommand ("turn 0")
     agent_host.sendCommand ("setYaw " + str (yaw))
+
+def check_agent_pos (agent_host):
+    """
+    Check to keep agent positioned correctly before a discrete move command
+    """
+    
+    agent_location = find_agent_location(agent_host)
+    if agent_location:
+        if agent_location[0] % 1 != 0.5:
+            agent_host.sendCommand(f"tpx {math.floor (agent_location[0]) + 0.5}")
+        if agent_location[2] % 1 != 0.5:
+            agent_host.sendCommand(f"tpz {math.floor (agent_location[2]) + 0.5}")
