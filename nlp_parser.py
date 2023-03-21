@@ -352,15 +352,14 @@ def recognize_speech_command (audio_file, agent_host):
         else:
             agent_host.sendCommand ("chat Listening...")
         r.pause_threshold = 1
-        audio = r.listen(source)
-  
+        audio = r.listen (source)
     try:
         if agent_host == None:
             print("Recognizing...")   
         else:
             agent_host.sendCommand ("chat Recognizing...")
-        query = r.recognize_google(audio, language ='en-in')
-  
+        query = r.recognize_google (audio, language ='en-in')
+
     except Exception as e:
         print (e)
         if agent_host == None:
