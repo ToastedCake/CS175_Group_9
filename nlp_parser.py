@@ -100,7 +100,6 @@ def send_command (verb, commands_map, agent_host):
     """
     Returns basic malmo command
     """
-
     if str (verb) == "stop":
         return send_stop_command (commands_map, agent_host)
     command = commands_map.get (str (verb)).get('')
@@ -110,20 +109,13 @@ def send_command_option (verb, option, commands_map, agent_host):
     """
     Returns basic malmo command with its option argument
     """
-
     if verb == "turn":
-        if agent_host == None:
-            command = commands_map.get (verb).get (option.lemma_)
+        if str (option) == "left" or str (option) == "right":
+            command = "turn_agent", str (option)
             return [command]
-        current_x, current_y, current_z, current_yaw = find.find_agent_location (agent_host)
-        if option.lemma_ == "left":
-            yaw = current_yaw - 90 # left
-        elif option.lemma_ == "right":
-            yaw = current_yaw + 90 # right
         else:
-            command = commands_map.get (verb).get (option.lemma_)
+            command = commands_map.get (verb).get (str (option))
             return [command]
-        find.turn_agent (agent_host, yaw)
 
     for a in option.ancestors:
         if a.pos == VERB:
@@ -158,13 +150,10 @@ def send_prep_command (verb, prep, commands_map, agent_host):
         for r in prep.rights:
             if r.pos_ == "NOUN":
                 # move to OBJECT
-                if agent_host == None:
-                    return [str (verb) + " " + str (prep) + " " + str(r)]
                 if str (r) == "tree":
-                    find.find_nearest_tree (agent_host)
+                    return ["find_nearest_tree"]
                 else:
-                    find.move_to (agent_host, str (r))
-                return [None]
+                    return ["move_to", str (r)]
             elif r.lemma_ in commands_map.get ("move"):
                 c = send_command_option (verb, r, commands_map, agent_host)
                 if c:
@@ -191,13 +180,17 @@ def send_object_command (verb, object, commands_map, agent_host):
                             for i in range (n):
                                 commands.append (command)
                             return commands
-
-    if agent_host == None:
-        return [str (verb) + " " + str (object)]
     
+    if verb == "turn":
+        if str (object) == "left" or str (object) == "right":
+            command = "turn_agent", str (object)
+            return [command]
+        else:
+            command = commands_map.get (verb).get (str (object))
+            return [command]
+
     if verb == "get":
-        find.move_to (agent_host, str (object))
-        return [None]
+        return ["move_to", str (object)]
 
     if verb == "use":
         world_state = agent_host.getWorldState()
@@ -212,15 +205,9 @@ def send_object_command (verb, object, commands_map, agent_host):
                     if object.text in type:
                         return ["hotbar." + str (index + 1) + " 1"]
     elif verb == "attack":
-        if agent_host == None:
-            return [str (verb) + " " + str (object)]
-        else:
-            find.chase_nearest_entity (agent_host, str (object))
+        return ["chase_nearest_entity", str (object)]
     elif verb == "chop":
-        if agent_host == None:
-            return [str (verb) + "] " + str (object)]
-        else:
-            find.chop_tree (agent_host)
+            return ["chop_tree"]
 
 def send_stop_command (commands_map, agent_host):
     """
@@ -321,13 +308,30 @@ def parse_string_command (string, commands_map = command_map, agent_host = None)
     if agent_host == None:
         return commands
     
+    find_functions = {
+        "move_to": find.move_to,
+        "turn_agent": find.turn_agent,
+        "chase_nearest_entity": find.chase_nearest_entity,
+        "chop_tree": find.chop_tree
+        }
+    
     for c in commands:
         if c:
             print (c, len (c))
             for c in c:
                 if c:
                     check_agent_pos (agent_host)
-                    agent_host.sendCommand (c)
+                    
+                    if c[0] in find_functions:
+                        if len (c) == 1:
+                            find_functions[c[0]](agent_host)
+                        else:
+                            find_functions[c[0]](agent_host, c[1])
+                    else:
+                        agent_host.sendCommand (c)
+                    
+                    time.sleep (0.1)
+            
             time.sleep(1)
 
 def recognize_speech_command (audio_file, agent_host):
@@ -371,8 +375,6 @@ def recognize_speech_command (audio_file, agent_host):
 def parse_speech_command (audio_file = None, commands_map = command_map, agent_host = None):
 
     command = recognize_speech_command (audio_file, agent_host)
-    if agent_host == None:
-        print ("Command: ", command)
-    else:
-        agent_host.sendCommand ("chat Command: " + command)
+    print ("Command: ", command)
+    agent_host.sendCommand ("chat Command: " + command)
     parse_string_command (command, commands_map, agent_host)
