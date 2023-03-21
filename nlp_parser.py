@@ -50,6 +50,7 @@ command_map = {
             },
             "crouch": {"": "crouch 1", "stop": ["crouch 0"]},
             "attack": {"": "attack 1", "stop": ["attack 0"]},
+            "chop": {},
             "use": {},
             "get": {"": "OBJECT"},
             "discard": {"": "discardCurrentItem"},
@@ -159,7 +160,10 @@ def send_prep_command (verb, prep, commands_map, agent_host):
                 # move to OBJECT
                 if agent_host == None:
                     return [str (verb) + " " + str (prep) + " " + str(r)]
-                find.move_to (agent_host, str (r))
+                if str (r) == "tree":
+                    find.find_nearest_tree (agent_host)
+                else:
+                    find.move_to (agent_host, str (r))
                 return [None]
             elif r.lemma_ in commands_map.get ("move"):
                 c = send_command_option (verb, r, commands_map, agent_host)
@@ -208,9 +212,15 @@ def send_object_command (verb, object, commands_map, agent_host):
                     if object.text in type:
                         return ["hotbar." + str (index + 1) + " 1"]
     elif verb == "attack":
-        return [str (verb) + " " + str (object)]
-    elif verb == "grab":
-        return [str (verb) + " " + str (object)]
+        if agent_host == None:
+            return [str (verb) + " " + str (object)]
+        else:
+            find.chase_nearest_entity (agent_host, str (object))
+    elif verb == "chop":
+        if agent_host == None:
+            return [str (verb) + "] " + str (object)]
+        else:
+            find.chop_tree (agent_host)
 
 def send_stop_command (commands_map, agent_host):
     """
@@ -320,7 +330,7 @@ def parse_string_command (string, commands_map = command_map, agent_host = None)
                     agent_host.sendCommand (c)
             time.sleep(1)
 
-def recognize_speech_command (audio_file):
+def recognize_speech_command (audio_file, agent_host):
     """
     Recognizes speech and returns its query
     """
@@ -333,22 +343,36 @@ def recognize_speech_command (audio_file):
         microphone = sr.Microphone()
     
     with microphone as source:
-        print("Listening...")
+        if agent_host == None:
+            print("Listening...")
+        else:
+            agent_host.sendCommand ("chat Listening...")
         r.pause_threshold = 1
         audio = r.listen(source)
   
     try:
-        print("Recognizing...")   
+        if agent_host == None:
+            print("Recognizing...")   
+        else:
+            agent_host.sendCommand ("chat Recognizing...")
         query = r.recognize_google(audio, language ='en-in')
   
     except Exception as e:
-        print(e)   
-        print("Unable to Recognize your voice.") 
+        print (e)
+        if agent_host == None:
+            print ("Unable to Recognize your voice.") 
+        else:
+            agent_host.sendCommand ("Unable to Recognize your voice.") 
+
         return "None"
      
     return query
 
 def parse_speech_command (audio_file = None, commands_map = command_map, agent_host = None):
 
-    query = recognize_speech_command (audio_file)
-    parse_string_command (query, commands_map, agent_host)
+    command = recognize_speech_command (audio_file, agent_host)
+    if agent_host == None:
+        print ("Command: ", command)
+    else:
+        agent_host.sendCommand ("chat Command: " + command)
+    parse_string_command (command, commands_map, agent_host)
