@@ -38,7 +38,7 @@ command_map = {
                 "stop": ["move 0", "strafe 0"],
                 "forward": "move 1", "forwards": "move 1", "back": "move -1", "backward": "move -1", "backwards": "move -1", "right": "strafe 1", "left": "strafe -1",
                 "north": "movenorth 1", "south": "movesouth 1", "east": "moveeast 1", "west": "movewest 1",
-                "to": "OBJECT"
+                "to": ""
             },
             "strafe": {"right": "strafe 1", "left": "strafe -1", "stop": ["strafe 0"]},
             "turn": {"right": "setPitch yaw + 90", "left": "setPitch yaw - 90",
@@ -52,7 +52,7 @@ command_map = {
             "attack": {"": "attack 1", "stop": ["attack 0"]},
             "chop": {},
             "use": {},
-            "get": {"": "OBJECT"},
+            "get": {"": ""},
             "discard": {"": "discardCurrentItem"},
             "stop": ["move 0", "jump 0", "turn 0", "strafe 0", "pitch 0", "crouch 0", "attack 0"],
             "quit": {"": "quit"}
@@ -353,6 +353,7 @@ def recognize_speech_command (audio_file, agent_host):
             agent_host.sendCommand ("chat Listening...")
         r.pause_threshold = 1
         audio = r.listen (source)
+
     try:
         if agent_host == None:
             print("Recognizing...")   
