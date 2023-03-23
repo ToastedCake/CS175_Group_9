@@ -111,8 +111,7 @@ def send_command_option (verb, option, commands_map, agent_host):
     """
     if verb == "turn":
         if str (option) == "left" or str (option) == "right":
-            command = "turn_agent", str (option)
-            return [command]
+            return [("turn_agent", str (option))]
         else:
             command = commands_map.get (verb).get (str (option))
             return [command]
@@ -151,9 +150,9 @@ def send_prep_command (verb, prep, commands_map, agent_host):
             if r.pos_ == "NOUN":
                 # move to OBJECT
                 if str (r) == "tree":
-                    return ["find_nearest_tree"]
+                    return [("find_nearest_tree")]
                 else:
-                    return ["move_to", str (r)]
+                    return [("move_to", str (r))]
             elif r.lemma_ in commands_map.get ("move"):
                 c = send_command_option (verb, r, commands_map, agent_host)
                 if c:
@@ -183,14 +182,13 @@ def send_object_command (verb, object, commands_map, agent_host):
     
     if verb == "turn":
         if str (object) == "left" or str (object) == "right":
-            command = "turn_agent", str (object)
-            return [command]
+            return [("turn_agent", str (object))]
         else:
             command = commands_map.get (verb).get (str (object))
             return [command]
 
     if verb == "get":
-        return ["move_to", str (object)]
+        return [("move_to", str (object))]
 
     if verb == "use":
         world_state = agent_host.getWorldState()
@@ -205,9 +203,9 @@ def send_object_command (verb, object, commands_map, agent_host):
                     if object.text in type:
                         return ["hotbar." + str (index + 1) + " 1"]
     elif verb == "attack":
-        return ["chase_nearest_entity", str (object)]
+        return [("chase_nearest_entity", str (object))]
     elif verb == "chop":
-            return ["chop_tree"]
+            return [("chop_tree")]
 
 def send_stop_command (commands_map, agent_host):
     """
