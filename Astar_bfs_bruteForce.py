@@ -453,13 +453,13 @@ def movement(agent_host,v,turn = False):
         agent_host.sendCommand("jumpsouth 1")
     elif(v.direction == "East" or v.direction == "East_Down"):
         if turn:
-            turn_agent (agent_host, -90)
-        agent_host.sendCommand("setYaw -90")
+            turn_agent (agent_host, 270)
+        agent_host.sendCommand("setYaw 270")
         agent_host.sendCommand("moveeast 1")
     elif(v.direction == "East_Up"):
         if turn:
-            turn_agent (agent_host, -90)
-        agent_host.sendCommand("setYaw -90")
+            turn_agent (agent_host, 270)
+        agent_host.sendCommand("setYaw 270")
         agent_host.sendCommand("jumpeast 1")
     elif(v.direction == "West" or v.direction == "West_Down"):
         if turn:
@@ -677,7 +677,7 @@ def find_nearest_tree (agent_host):
     (x, z) = coords
     # steve height
     y = 5
-    location = np.ceil ([x - 1, y, z])
+    location = np.ceil ([x - 1, y, z - 1])
     move_to_location (agent_host, location, 0)
     check_agent_pos (agent_host)
     
