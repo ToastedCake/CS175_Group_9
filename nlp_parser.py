@@ -188,7 +188,10 @@ def send_object_command (verb, object, commands_map, agent_host):
             return [command]
 
     if verb == "get":
-        return [("move_to", str (object))]
+        if str (object) == "tree":
+            return [("find_nearest_tree")]
+        else:
+            return [("move_to", str (object))]
 
     if verb == "use":
         world_state = agent_host.getWorldState()
@@ -289,12 +292,12 @@ def check_agent_pos (agent_host):
             agent_host.sendCommand(f"tpz {math.floor (agent_location[2]) + 0.5}")
 
 
-def parse_string_command (string, commands_map = command_map, agent_host = None):
+def parse_string_command (command, commands_map = command_map, agent_host = None):
     """
     Parses string command and sends the parsed commands to the agent
     """
     
-    doc = nlp (string)
+    doc = nlp (command)
     commands = []
     for sentence in doc.sents:
             r = sentence.root
@@ -310,26 +313,25 @@ def parse_string_command (string, commands_map = command_map, agent_host = None)
         "move_to": find.move_to,
         "turn_agent": find.turn_agent,
         "chase_nearest_entity": find.chase_nearest_entity,
+        "find_nearest_tree": find.find_nearest_tree,
         "chop_tree": find.chop_tree
         }
     
     for c in commands:
         if c:
-            print (c, len (c))
+            if DEBUG:
+                print (c, len (c))
             for c in c:
                 if c:
                     check_agent_pos (agent_host)
                     
-                    if c[0] in find_functions:
-                        if len (c) == 1:
-                            find_functions[c[0]](agent_host)
-                        else:
-                            find_functions[c[0]](agent_host, c[1])
+                    if c in find_functions:
+                        find_functions[c](agent_host)
+                    elif c[0] in find_functions:
+                        find_functions[c[0]](agent_host, c[1])
                     else:
                         agent_host.sendCommand (c)
-                    
                     time.sleep (0.1)
-            
             time.sleep(1)
 
 def recognize_speech_command (audio_file, agent_host):
