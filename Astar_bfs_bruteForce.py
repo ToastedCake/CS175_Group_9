@@ -808,7 +808,7 @@ def find_nearest_entity_locations (agent_host, entityName):
     if 'entities' in observations:
         entities = {}
         for entity in observations['entities']:
-            if entity['name'] == entityName:
+            if entity['name'] == entityName.capitalize() or entityName in entity['name']:
                 target_x = entity['x']
                 target_y = entity['y']
                 target_z = entity['z']
@@ -847,7 +847,7 @@ def find_entity_location(agent_host,entityName):
     
     if 'entities' in observations:
         for entity in observations['entities']:
-            if entity['name'] == entityName:
+            if entity['name'] == entityName.capitalize() or entityName in entity['name']:
                 return (entity['x'], entity['y'], entity['z'])
     return None
 
@@ -886,7 +886,7 @@ def find_agent_location(agent_host):
                 return (entity['x'], entity['y'], entity['z'], entity['yaw'])
     return None
 
-def move_to(agent_host,entityName,mode):
+def move_to(agent_host,entityName,mode=0):
     entity_location = find_entity_location(agent_host,entityName)
     agent_location = find_agent_location(agent_host)
     if entity_location is None:
@@ -920,7 +920,7 @@ def move_to(agent_host,entityName,mode):
 
     return 
 
-def move_to_location (agent_host, location, mode):
+def move_to_location (agent_host, location, mode = 0):
     """
     Moves agent to location's coordinates location = (x, y, z)
     """
@@ -1012,11 +1012,11 @@ def chase_entity (agent_host, entityName, entityID):
                 if "LineOfSight" in observations:
                     los = observations["LineOfSight"]
                     type = los["type"]
-                    if type == entityName:
+                    if type == entityName.capitalize():
                         agent_host.sendCommand ("attack 1")
                         if DEBUG:
                             print ("attack")
-                        agent_host.sendCommand ("attack 0")
+                        agent_host.sendCommand ("attack 0")    
                 agent_host.sendCommand(f"setPitch {pitch_degrees}")        
                 print("\nAlready at "+ entityName+"'s location.")
             
