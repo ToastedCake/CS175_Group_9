@@ -677,7 +677,8 @@ def find_nearest_tree (agent_host):
     (x, z) = coords
     # steve height
     y = 5
-    location = np.ceil ([x - 1, y, z - 1])
+    location = np.ceil ([x, y, z])
+    print (location)
     move_to_location (agent_host, location, 0)
     check_agent_pos (agent_host)
     
