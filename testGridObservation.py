@@ -28,8 +28,8 @@ import sys
 import time
 import math
 import Astar_bfs_bruteForce as find
+import nlp_parser as nlp
 import numpy as np
-#import nlp_parser
 
 obs_x_range = 100
 obs_y_range = 1
@@ -51,27 +51,23 @@ def serObservationRange():
 def getBlockDrawing():
     """Create the XML for the entities."""
     s = ""
-    s+=  '<DrawBlock x="0" y="5" z="-2" type="diamond_block" />'
-    s+=  '<DrawBlock x="-2" y="5" z="0" type="stone" />'
-    s+=  '<DrawBlock x="2" y="5" z="0" type="gold_block" />'
-    s+=  '<DrawBlock x="0" y="5" z="2" type="iron_block" />'
-
+    s+=  '<DrawBlock x="0" y="4" z="0" type="diamond_block" />'
     
     return s
 
 def getItemDrawing():
     """Create the XML for the items."""
     s = ""
-    s += '<DrawItem x="0" y="5" z="-20" type="diamond_sword"/>'
-    s += '<DrawItem x="-20" y="5" z="30" type="diamond_pickaxe"/>'
+    s += '<DrawItem x="0" y="5" z="20" type="diamond_sword"/>'
+    # s += '<DrawItem x="0" y="5" z="20" type="diamond_axe"/>'
     return s
 
 def getEntityDrawing():
     """Create the XML for the entities."""
     s = ""
-    s += '<DrawEntity x="10.5" y="5" z="10.5" type="Pig"/>'
-    # s += '<DrawEntity x="30.5" y="5" z="30.5" type="Cow"/>'
-    # s += '<DrawEntity x="17.5" y="5" z="55.5" type="Sheep"/>'
+    s += '<DrawEntity x="10" y="5" z="10" type="Pig"/>'
+    # s += '<DrawEntity x="10" y="5" z="10" type="Cow"/>'
+    # s += '<DrawEntity x="10" y="5" z="10" type="Sheep"/>'
     return s
 
 def getMissionXML():
@@ -79,7 +75,7 @@ def getMissionXML():
     return '''
     <Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
         <About>
-            <Summary>Find Entity on the map and move towards it.</Summary>
+            <Summary>Recognize Speech Commands</Summary>
         </About>
         <ServerSection>
             <ServerInitialConditions>
@@ -94,7 +90,7 @@ def getMissionXML():
                 <DrawingDecorator>
                     '''+ getItemDrawing() + getBlockDrawing()+getEntityDrawing()+'''
                 </DrawingDecorator>
-                <ServerQuitFromTimeUp timeLimitMs="50000"/>
+                <ServerQuitFromTimeUp timeLimitMs="100000"/>
                 <ServerQuitWhenAnyAgentFinishes />
             </ServerHandlers>
         </ServerSection>
@@ -104,17 +100,31 @@ def getMissionXML():
                 <Placement x="0.5" y="5" z="0.5"/>
             </AgentStart>
             <AgentHandlers>
+                <ObservationFromRay/>
                 <ObservationFromNearbyEntities>
                     ''' + serObservationRange() + '''
                 </ObservationFromNearbyEntities>
+                <ChatCommands/>
                 <ObservationFromGrid>                      
                 <Grid name="grid_observation">                        
                 <min x="-59" y="-2" z="-59"/>                        
                 <max x="59" y="3" z="59"/>                    
                 </Grid>                  
                 </ObservationFromGrid>
-                <DiscreteMovementCommands/>
+                <DiscreteMovementCommands>
+                    <ModifierList type="deny-list">
+                        <command>attack</command>
+                        <command>turn</command>
+                    </ModifierList>
+                </DiscreteMovementCommands>
                 <AbsoluteMovementCommands/>
+                <ContinuousMovementCommands turnSpeedDegs="620">
+                    <ModifierList type="allow-list">
+                        <command>attack</command>
+                        <command>turn</command>
+                    </ModifierList>
+                </ContinuousMovementCommands>
+                <ObservationFromFullInventory flat="false"/>
                 <InventoryCommands/>
                 <MissionQuitCommands/>
             </AgentHandlers>
@@ -165,25 +175,14 @@ while not world_state.has_mission_begun:
 print()
 print("Mission running", end='')
 #################################################
-# Find the closet entity's location on the map and move the agent toward it
-#find.move_to(agent_host,"diamond_pickaxe")
 
-world_state = agent_host.getWorldState()
-while world_state.number_of_observations_since_last_state == 0:
-    time.sleep(0.1)
-    world_state = agent_host.getWorldState()
-time.sleep(1)
-# world_state = agent_host.getWorldState()
-# msg = world_state.observations[-1].text
-# observations = json.loads(msg)
-# print(observations)
-# graph = observations["grid_observation"] # 1d array
-# graph = np.reshape(graph,(5,5))
-# print(graph)
+start_time = time.time()
 
-find.find_nearest_tree (agent_host)
-entity = find.find_nearest_entity (agent_host, "Pig")
-print (entity)
+nlp.parse_speech_command (agent_host = agent_host)
+
+end_time = time.time() - start_time
+
+print ("time executed: ", end_time)
 
 ######################################################
 # Loop until mission ends:
