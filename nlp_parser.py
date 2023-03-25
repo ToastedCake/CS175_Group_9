@@ -4,7 +4,6 @@ import numpy as np
 from word2number import w2n
 
 # Load trained nlp model
-# trained_model_path = "I:\\My Drive\\UCI\\Winter 2023\\COMPSCI 175\\text_parse\\text_parse\models\\trained-trf-pos-model"
 nlp = spacy.load ("en_core_web_trf")
 
 from gensim.models import KeyedVectors
@@ -14,17 +13,7 @@ import math
 import time
 import speech_recognition as sr
 
-# Load pretrained model (since intermediate data is not included, the model cannot be refined with additional data)
-#model = Word2Vec.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True, norm_only=True) -> Deprecated
-
-# vector_model_path = "C:\\Users\\Unkow\\Downloads\\GoogleNews-vectors-negative300.bin.gz"
-# model = gensim.models.KeyedVectors.load_word2vec_format (vector_model_path, binary=True) # without *norm_only* param
-
-# model.init_sims(replace=True)
-# model.save("models/GoogleNews")
-
 # Load saved vector model
-# saved_vector_model_path = "models/GoogleNews"
 saved_vector_model_path = "I:\\My Drive\\UCI\\Winter 2023\\COMPSCI 175\\text_parse\\text_parse\\models\\GoogleNews"
 model = KeyedVectors.load (saved_vector_model_path, mmap='r')
 
